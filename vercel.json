@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "api/*.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/api/db-get",  "dest": "/api/db_get.py"  },
+    { "src": "/api/db-set",  "dest": "/api/db_set.py"  },
+    { "src": "/api/pair",    "dest": "/api/pair.py"    },
+    { "src": "/api/check-pair", "dest": "/api/check_pair.py" },
+    { "src": "/api/send-scan",  "dest": "/api/send_scan.py"  },
+    { "src": "/api/poll-scan",  "dest": "/api/poll_scan.py"  },
+    { "src": "/(.*)",        "dest": "/$1"             }
+  ]
+}
