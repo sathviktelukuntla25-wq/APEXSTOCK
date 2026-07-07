@@ -349,3 +349,355 @@
   </script>
 </body>
 </html>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apex Mobile Scanner Gateway</title>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --color-bg: #020617;
+      --color-gold: #fbbf24;
+      --color-border: rgba(255, 255, 255, 0.08);
+      --text-muted: #94a3b8;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--color-bg);
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+      padding: 16px;
+    }
+    .container {
+      width: 100%;
+      max-width: 450px;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 24px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+    h2 {
+      margin: 0 0 4px 0;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--color-gold);
+      letter-spacing: 1.5px;
+      text-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
+    }
+    p {
+      font-size: 12.5px;
+      color: #cbd5e1;
+      margin: 0 0 24px 0;
+      line-height: 1.4;
+    }
+    #reader {
+      width: 100%;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--color-border);
+      background: #000;
+      margin-bottom: 20px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+    #reader th {
+      color: #fff !important;
+      background: #1e293b !important;
+    }
+    #reader button {
+      background: linear-gradient(135deg, #b45309, #d4af37) !important;
+      border: none !important;
+      color: #fff !important;
+      padding: 8px 16px !important;
+      border-radius: 4px !important;
+      cursor: pointer !important;
+      font-size: 11px !important;
+      font-weight: 800 !important;
+      text-transform: uppercase !important;
+      margin: 6px !important;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      background: rgba(251, 191, 36, 0.08);
+      color: var(--color-gold);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      border: 1px solid rgba(251, 191, 36, 0.2);
+      transition: all 0.3s ease;
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: none;
+      font-weight: 800;
+      font-size: 12.5px;
+      cursor: pointer;
+      font-family: inherit;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      transition: all 0.2s ease;
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #e2e8f0;
+      margin-top: 10px;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .mock-panel {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin: 20px 0 10px 0;
+      border-top: 1px solid var(--color-border);
+      padding-top: 16px;
+      text-align: left;
+    }
+    .mock-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .mock-btn {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: #fff;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    .mock-btn:hover {
+      background: rgba(251, 191, 36, 0.05);
+      border-color: rgba(251, 191, 36, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>APEX MOBILE DESK</h2>
+    <div id="connection-status" class="status-badge">Establishing P2P Datalink...</div>
+    <p>Point your mobile camera at any product barcode sticker to scan and dispatch it instantly to the laptop cart.</p>
+    
+    <!-- Real Camera Viewfinder -->
+    <div id="reader"></div>
+
+    <div id="scanned-result" style="display: none; background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 12px; border-radius: 6px; font-size: 13px; margin-bottom: 20px; color: #10b981; font-weight: 800;">
+      âœ“ Scanned Barcode SKU: <span id="sku-text" style="font-family: monospace; color: #fff;">-</span>
+    </div>
+
+    <!-- Manual Simulator panel in case camera permissions are restricted -->
+    <div class="mock-panel">
+      <div style="font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Offline Manual Scanner:</div>
+      <div>If camera permissions are blocked or you don't have physical barcodes, click a product to send simulated scan:</div>
+      <div class="mock-grid">
+        <button type="button" class="mock-btn" onclick="sendSimulatedScan('GR-BR-50K')">ðŸŒ¾ Basmati Rice</button>
+        <button type="button" class="mock-btn" onclick="sendSimulatedScan('OL-SO-15L')">ðŸŒ» Sunflower Oil</button>
+        <button type="button" class="mock-btn" onclick="sendSimulatedScan('BV-AT-10K')">ðŸƒ Assam Tea</button>
+        <button type="button" class="mock-btn" onclick="sendSimulatedScan('GR-MK-001')">ðŸŒ½ Malki Grain</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const urlParams  = new URLSearchParams(window.location.search);
+    const peerId     = urlParams.get('peer');
+    const serverHost = urlParams.get('host') || window.location.hostname;
+    const statusEl   = document.getElementById("connection-status");
+
+    let ws           = null;
+    let peerConn     = null;
+    let isConnected  = false;
+    let reconnectTimer = null;
+    const WS_PORT    = 8765;
+
+    // â”€â”€ Status display helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function setStatus(text, color = "#fbbf24", bg = "rgba(251,191,36,0.08)", border = "rgba(251,191,36,0.2)") {
+      statusEl.textContent   = text;
+      statusEl.style.color   = color;
+      statusEl.style.background = bg;
+      statusEl.style.borderColor = border;
+    }
+
+    if (!peerId) {
+      setStatus("No Pairing ID Provided", "#ef4444", "rgba(239,68,68,0.1)", "rgba(239,68,68,0.2)");
+    } else {
+      const isSecure = window.location.protocol === 'https:';
+      if (isSecure) {
+        // On HTTPS (Vercel) WebSocket is blocked — go straight to PeerJS
+        setStatus("Connecting via Cloud P2P...", "#fbbf24");
+        tryPeerJSFallback();
+      } else {
+        setStatus("Connecting via WebSocket...", "#fbbf24");
+        connectWebSocket();
+      }
+    }
+
+    // â”€â”€ 1. WebSocket Connection (Primary) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function connectWebSocket() {
+      if (ws) { try { ws.close(); } catch(e) {} }
+
+      ws = new WebSocket(`ws://${serverHost}:${WS_PORT}`);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: "register", peer: peerId, role: "mobile" }));
+        isConnected = true;
+        setStatus("Laptop Connected (WebSocket) âœ“", "#10b981",
+          "rgba(16,185,129,0.08)", "rgba(16,185,129,0.2)");
+        if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === "paired") {
+            setStatus("Laptop Paired âœ“ â€” Ready to Scan", "#10b981",
+              "rgba(16,185,129,0.08)", "rgba(16,185,129,0.2)");
+          } else if (msg.type === "ack") {
+            // Flash the scanned result green on successful relay acknowledgement
+            const scanBox = document.getElementById("scanned-result");
+            if (scanBox) {
+              scanBox.style.borderColor = "rgba(16,185,129,0.5)";
+              setTimeout(() => { scanBox.style.borderColor = "rgba(16,185,129,0.2)"; }, 600);
+            }
+          } else if (msg.type === "dup") {
+            setStatus("âš ï¸ Duplicate Scan Ignored", "#fbbf24");
+            setTimeout(() => setStatus("Laptop Paired âœ“ â€” Ready to Scan", "#10b981",
+              "rgba(16,185,129,0.08)", "rgba(16,185,129,0.2)"), 2000);
+          } else if (msg.type === "disconnected") {
+            setStatus("Laptop Disconnected", "#ef4444", "rgba(239,68,68,0.08)", "rgba(239,68,68,0.2)");
+          }
+        } catch(e) {}
+      };
+
+      ws.onerror = () => {
+        console.warn("[WS] WebSocket failed, falling back to cloud P2P...");
+        tryPeerJSFallback();
+      };
+
+      ws.onclose = () => {
+        isConnected = false;
+        if (!reconnectTimer) {
+          setStatus("Reconnecting...", "#fbbf24");
+          reconnectTimer = setTimeout(connectWebSocket, 3000);
+        }
+      };
+    }
+
+    // â”€â”€ 2. PeerJS WebRTC fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function tryPeerJSFallback() {
+      if (typeof Peer === "undefined") {
+        tryRESTFallback();
+        return;
+      }
+      setStatus("Connecting via Cloud P2P...", "#fbbf24");
+      try {
+        const peer = new Peer();
+        peer.on('open', () => {
+          peerConn = peer.connect(peerId);
+          peerConn.on('open', () => {
+            isConnected = true;
+            setStatus("Laptop Connected (Cloud) âœ“", "#10b981",
+              "rgba(16,185,129,0.08)", "rgba(16,185,129,0.2)");
+            peerConn.send({ type: 'pair' });
+          });
+          peerConn.on('close', () => {
+            isConnected = false;
+            setStatus("Connection Closed", "#ef4444", "rgba(239,68,68,0.08)", "rgba(239,68,68,0.2)");
+          });
+        });
+        peer.on('error', () => tryRESTFallback());
+      } catch (e) {
+        tryRESTFallback();
+      }
+    }
+
+    // â”€â”€ 3. REST API fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function tryRESTFallback() {
+      setStatus("Connecting via Local REST...", "#fbbf24");
+      fetch(`/api/pair?peer=${peerId}`)
+        .then(r => r.json())
+        .then(() => {
+          isConnected = true;
+          setStatus("Laptop Connected (REST) âœ“", "#10b981",
+            "rgba(16,185,129,0.08)", "rgba(16,185,129,0.2)");
+        })
+        .catch(() => {
+          setStatus("Offline / Connection Error", "#ef4444",
+            "rgba(239,68,68,0.08)", "rgba(239,68,68,0.2)");
+        });
+    }
+
+    // â”€â”€ Scan transmission â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function sendScanToLaptop(sku) {
+      if (!peerId) return;
+
+      document.getElementById("sku-text").textContent = sku;
+      document.getElementById("scanned-result").style.display = "block";
+      if (navigator.vibrate) navigator.vibrate(150);
+
+      // Try WebSocket first
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "scan", sku: sku }));
+        return;
+      }
+      // Try PeerJS
+      if (peerConn && peerConn.open) {
+        peerConn.send({ type: 'scan_sku', sku: sku });
+        return;
+      }
+      // REST fallback
+      fetch(`/api/send-scan?peer=${peerId}&sku=${encodeURIComponent(sku)}`)
+        .catch(e => console.warn("REST send-scan failed:", e));
+    }
+
+    // â”€â”€ Camera barcode scanner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    function onScanSuccess(decodedText) {
+      sendScanToLaptop(decodedText);
+    }
+
+    function onScanFailure() { /* Silent */ }
+
+    try {
+      const scanner = new Html5QrcodeScanner(
+        "reader",
+        { fps: 15, qrbox: { width: 260, height: 160 }, rememberLastUsedCamera: true }
+      );
+      scanner.render(onScanSuccess, onScanFailure);
+    } catch (err) {
+      console.warn("Camera scanner load error:", err);
+    }
+
+    // â”€â”€ Manual simulator buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    window.sendSimulatedScan = function(sku) {
+      sendScanToLaptop(sku);
+    };
+  </script>
+</body>
+</html>
